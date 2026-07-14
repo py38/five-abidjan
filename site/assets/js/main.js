@@ -196,7 +196,7 @@ const MENU = {
   ],
 };
 
-const fmt = (n) => n.toLocaleString("fr-FR").replace(/ | /g, " ") + " FCFA";
+const fmt = (n) => n.toLocaleString("fr-FR").replace(/[\u202f\u00a0]/g, " ") + " F";
 
 /* ─────────────── PRELOADER ─────────────── */
 window.addEventListener("load", () => {
@@ -464,20 +464,41 @@ cartOverlay.addEventListener("click", () => openCart(false));
 document.getElementById("cartGoMenu").addEventListener("click", () => openCart(false));
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") openCart(false); });
 
+// Mode « Livraison » → afficher le champ adresse
+const cartMode = document.getElementById("cartMode");
+const cartAdresseWrap = document.getElementById("cartAdresseWrap");
+cartMode.addEventListener("change", () => {
+  cartAdresseWrap.hidden = cartMode.value !== "Livraison";
+});
+
 document.getElementById("cartSend").addEventListener("click", () => {
   if (!cart.length) return;
-  const nom = document.getElementById("cartNom").value.trim();
-  const mode = document.querySelector('input[name="mode"]:checked').value;
+  const val = (id) => document.getElementById(id).value.trim();
+  const nom = val("cartNom");
+  const tel = val("cartTel");
+  const mode = cartMode.value;
+  const adresse = val("cartAdresse");
+  const note = val("cartNote");
+
+  if (!nom || !tel) {
+    showToast("Merci d'indiquer votre <b>nom</b> et votre <b>téléphone</b>.");
+    document.getElementById(nom ? "cartTel" : "cartNom").focus();
+    return;
+  }
+
   const total = cart.reduce((s, c) => s + c.q * c.p, 0);
 
-  let msg = "🍽️ *COMMANDE — FIVE ABIDJAN*\n\n";
+  let msg = "Bonjour Five Abidjan, je souhaite passer commande.\n\n";
   cart.forEach((c) => {
-    msg += `• ${c.q}× ${c.n} — ${fmt(c.p * c.q)}\n`;
+    msg += `• ${c.q} × ${c.n}  —  ${fmt(c.p * c.q)}\n`;
   });
-  msg += `\n*Total : ${fmt(total)}*\n`;
-  msg += `📍 Mode : ${mode}\n`;
-  if (nom) msg += `👤 Nom : ${nom}\n`;
-  msg += "\nMerci de me confirmer la disponibilité. 🙏";
+  msg += `\nTOTAL : ${fmt(total)}\n\n`;
+  msg += `• Nom : ${nom}\n`;
+  msg += `• Téléphone : ${tel}\n`;
+  msg += `• Mode : ${mode}\n`;
+  if (mode === "Livraison" && adresse) msg += `• Adresse : ${adresse}\n`;
+  if (note) msg += `• Note : ${note}\n`;
+  msg += "\nJe règlerai par Wave / Orange Money. Merci de me confirmer la commande et de m'envoyer le numéro de paiement — je renverrai la capture de confirmation.";
 
   window.open(`https://wa.me/${WHATSAPP}?text=${encodeURIComponent(msg)}`, "_blank");
 });
